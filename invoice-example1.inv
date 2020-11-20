@@ -1,0 +1,112 @@
+//By Edwar Rojas
+// edrojasb@unal.edu.co - edwar.red@gmail.com
+
+/****************************************************************
+ *  D O M A I N 
+ ****************************************************************/
+
+//Create Constraints
+CREATE CONSTRAINT TaxTypeId IN ('01','02','03','04','05','06','07','20');
+CREATE CONSTRAINT TaxTypeName IN ('IVA','IC','ICA','INC','ReteIVA','ReteFuente','ReteICA','FtoHorticultura'); 
+
+//Create Fields of Invoice
+CREATE FIELD FAA01 STRING;
+CREATE FIELD FAB05 INTEGER NAME 'InvoiceAuthorization' NOTE 'Número autorización: Número del código de la resolución otorgada para la numeración';
+CREATE FIELD FAB07 DATE NAME 'StartDate' NOTE 'Fecha de inicio de la autorización de la numeración';
+CREATE FIELD FAB08 DATE NAME 'EndDate' NOTE 'Fecha final de la autorización de la numeración';
+CREATE FIELD FAB10 STRING NOT NULL NAME 'Prefix' NOTE 'Prefijo de la autorización de numeración de facturación dado por el SIE de Numeración';
+CREATE FIELD FAB11 STRING NAME 'From' NOTE 'Valor inicial del rango de numeración otorgado';
+CREATE FIELD FAB12 STRING NAME 'To' NOTE 'Valor final del rango de numeración otorgado';
+CREATE FIELD FAB14 STRING NAME 'IdentificationCode';
+CREATE FIELD FAB19 STRING NAME 'ProviderID' NOTE 'Identificador del Proveedor Tecnológico utilizado en la emisión de la factura. Un Obligado a facturar puede ser también Proveedor Tecnológico para sí mismo u otros, en cuyo caso será Proveedor Tecnológico';
+CREATE FIELD FAB24 STRING NAME 'softwareID' NOTE 'Identificador Software: Identificador del software habilitado para la emisión de facturas';
+CREATE FIELD FAB27 STRING NAME 'SoftwareSecurityCode' NOTE 'Huella del software que autorizó la DIAN al Obligado a Facturar Electrónicamente o al Proveedor Tecnológico';
+CREATE FIELD FAB31 STRING NAME 'AuthorizationProviderID';
+CREATE FIELD FAB36 STRING NAME 'QRCode';
+CREATE FIELD FAJ40 STRING CONSTRAINT TaxTypeId NAME 'ID' NOTE 'Identificador del tributo';
+CREATE FIELD FAJ41 STRING CONSTRAINT TaxTypeName NAME 'Name' NOTE 'Nombre del tributo';
+
+//Create particular invoice
+CREATE DOCUMENT INVOICE f1( 
+	FAA01 = NULL,
+	FAB05 = '18760000001',
+	FAB07 = '2019-01-19',
+	FAB08 = '2030-01-19',
+	FAB10 = 'SETP',
+	FAB11 = 990000000,
+	FAB12 = 995000000,
+	FAB14 = 'CO',
+	FAB19 = '800197268',
+	FAB24='56f2ae4e-9812-4fad-9255-08fcfcd5ccb0',
+	FAB27 ='a8d18e4e5aa00b44a0b1f9ef413ad8215116bd3ce91730d580eaed795c83b5a32fe6f0823abc71400b3d59eb542b7de8',
+	FAB31 ='800197268',
+	FAB36 = 'QRcode'
+);
+
+ 
+//Queries over the invoice
+SELECT INVOICE WHERE ID=f1;
+
+SELECT INVOICE WHERE FAB05='18760000001';
+
+SELECT setCertificate('/path/certificate/certif.cer','password'); 
+
+//With JAXB
+//SELECT loadAppJava('/opt/invoiceql/runtime-EclipseApplication/invoiceql-java-app/src'); 
+
+//With Python
+SELECT loadAppPython('/opt/invoiceql/python/invoiceql-gen-example');
+
+//With Template
+SELECT xml('f1','factura-f1.xml'); 
+
+//SELECT pdf('f1','factura-f1-representacion.pdf');
+
+//SELECT INVOICE send('f1');
+
+
+/****************************************************************************
+ *  A R C H I T E C T U R E
+ ****************************************************************************/
+//Declare Libraries
+ADD LIBRARY UblInvoice PREFIX '' NS 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2';
+ADD LIBRARY CommonAggregateComponents PREFIX 'cac' NS 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
+ADD LIBRARY CommonBasicComponents PREFIX 'cbc' NS 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+ADD LIBRARY xmldsig PREFIX 'ds' NS 'http://www.w3.org/2000/09/xmldsig#';
+ADD LIBRARY CommonExtensionComponents PREFIX 'ext' NS 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2';
+ADD LIBRARY DianLibrary PREFIX 'sts' NS 'dian:gov:co:facturaelectronica:Structures-2-1';
+ADD LIBRARY xades PREFIX 'xades' NS 'http://uri.etsi.org/01903/v1.3.2#';
+ADD LIBRARY xades PREFIX 'xades141' NS 'http://uri.etsi.org/01903/v1.4.1#';
+ADD LIBRARY XMLSchema_instance PREFIX 'xsi' NS 'http://www.w3.org/2001/XMLSchema-instance';
+
+
+/****************************************************************************
+* T E C N O L O G Y
+ ****************************************************************************/
+//Declare tags
+DEFINE TAG Invoice;  
+DEFINE TAG UBLExtensions LIBRARY CommonExtensionComponents PARENT Invoice;
+DEFINE TAG UBLExtension LIBRARY CommonExtensionComponents PARENT UBLExtensions;
+DEFINE TAG ExtensionContent LIBRARY CommonExtensionComponents PARENT UBLExtensions;
+DEFINE TAG DianExtensions LIBRARY DianLibrary PARENT ExtensionContent;
+DEFINE TAG InvoiceControl LIBRARY DianLibrary PARENT DianExtensions;
+DEFINE TAG InvoiceAuthorization LIBRARY DianLibrary PARENT InvoiceControl;
+DEFINE TAG AuthorizationPeriod LIBRARY DianLibrary PARENT InvoiceControl;
+DEFINE TAG StartDate LIBRARY CommonBasicComponents PARENT AuthorizationPeriod FIELD FAB07;
+DEFINE TAG EndDate LIBRARY CommonBasicComponents PARENT AuthorizationPeriod FIELD FAB08;
+DEFINE TAG AuthorizedInvoices LIBRARY DianLibrary PARENT InvoiceControl; 
+DEFINE TAG Prefix LIBRARY DianLibrary PARENT AuthorizedInvoices FIELD FAB10; 
+DEFINE TAG From LIBRARY DianLibrary PARENT AuthorizedInvoices FIELD FAB11;
+DEFINE TAG To LIBRARY DianLibrary PARENT AuthorizedInvoices FIELD FAB12; 
+DEFINE TAG InvoiceSource LIBRARY DianLibrary PARENT DianExtensions;
+DEFINE TAG IdentificationCode LIBRARY CommonBasicComponents PARENT InvoiceSource FIELD FAB14(listAgencyID='6',listAgencyName='United Nations Economic Commission for Europe',listSchemeURI='urn:oasis:names:specification:ubl:codelist:gc:CountryIdentificationCode-2.1');
+DEFINE TAG SoftwareProvider LIBRARY DianLibrary PARENT DianExtensions; 
+DEFINE TAG ProviderID LIBRARY DianLibrary PARENT SoftwareProvider FIELD FAB19(schemeAgencyID='195',schemeAgencyName='CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)',schemeID='4',schemeName='31');
+DEFINE TAG SoftwareID LIBRARY DianLibrary PARENT SoftwareProvider FIELD FAB24(schemeAgencyID='195',schemeAgencyName='CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)');
+DEFINE TAG SoftwareSecurityCode LIBRARY DianLibrary PARENT DianExtensions FIELD FAB27(schemeAgencyID='195',schemeAgencyName='CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)');
+DEFINE TAG AuthorizationProvider LIBRARY DianLibrary PARENT DianExtensions;
+DEFINE TAG AuthorizationProviderID LIBRARY DianLibrary PARENT AuthorizationProvider FIELD FAB31(schemeAgencyID='195', schemeAgencyName='CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)',schemeID='4',schemeName='31');
+DEFINE TAG QRCode LIBRARY DianLibrary PARENT DianExtensions FIELD FAB36;
+
+
+

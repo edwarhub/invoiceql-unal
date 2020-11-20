@@ -1,0 +1,73 @@
+/**
+By: Edwar Rojas - edwar.red@gmail.com - edrojasb@unal.edu.co
+
+Question mark stands for (?): zero or one
+Plus stands for (+): one or more
+Star stands for (*): zero or more
+
+**/
+grammar org.invoice.InvoiceqlDsl with org.eclipse.xtext.common.Terminals
+
+generate invoiceqlDsl "http://www.invoice.org/InvoiceqlDsl"
+
+//DOMAIN
+Script:
+	((statementList+=Statement) ';')+;
+
+Statement:
+	DeclareFieldStatement | CreateDocumentInvoiceStatement | DeclareConstraintCheckStatement | SelectInvoiceStatement |
+	AddUblLibraryStatement | DefineTagStatement;
+
+DeclareConstraintCheckStatement:
+	'CREATE' 'CONSTRAINT' name=ID 'IN' '(' items+=Datatype (',' items+=Datatype)* ')';
+
+DeclareFieldStatement:
+	'CREATE' 'FIELD' name=ID datatype=DatatypeName (notnull='NOT' 'NULL')? ('CONSTRAINT' constraint=ID)? ('COMPONENT'
+	component=ID)? ('NAME'
+	nameField=STRING)? ('NOTE'
+	note=STRING)?;
+
+CreateDocumentInvoiceStatement:
+	type='CREATE' 'DOCUMENT' 'INVOICE' name=ID '(' fields+=ID '=' values+=Datatype (',' fields+=ID '=' values+=Datatype)*
+	')';
+
+SelectInvoiceStatement:
+	'SELECT' ('INVOICE' (where='WHERE' whereId='ID' '=' idfield=ID | where='WHERE' idfield=ID '=' valWhere=Datatype) |
+	function=Function);
+
+Function:
+	name=ID '(' args+=Datatype? (',' args+=Datatype)* ')';
+
+Datatype:
+	integerVal=INTEGER | stringVal=STRING | doubleVal=DOUBLE | boolVal=BOOLEAN | nullVal='NULL';
+
+DatatypeName:
+	'INTEGER' | 'STRING' | 'DOUBLE' | 'BOOLEAN' | 'DATE' | 'TIME';
+
+	//ARCHITECTURE
+AddUblLibraryStatement:
+	'ADD' 'LIBRARY' name=ID 'PREFIX' prefix=STRING 'NS' ns=STRING;
+
+	//TECNOLOGY
+DefineTagStatement:
+	'DEFINE' 'TAG' name=ID ('LIBRARY' library=ID)* ('PARENT' parent=ID)* ('FIELD' field=ID)* ('(' attrsName+=ID '=' attrsVal+=Datatype (','
+	attrsName+=ID '=' attrsVal+=Datatype)* ')')*;
+
+	//TEMINAL
+terminal BOOLEAN:
+	'TRUE' | 'FALSE';
+
+terminal INTEGER:
+	'-'? ('0'..'9')+;
+
+terminal DOUBLE:
+	'-'? ('0'..'9')+ '.' ('0'..'9')+;
+
+@Override
+terminal STRING:
+	"'" ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'"))* "'";
+
+
+	
+	
+	
